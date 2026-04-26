@@ -5,6 +5,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
+from credentials import load_client_config
 
 GMAIL_MCP_URL = "https://gmailmcp.googleapis.com/mcp/v1"
 TOKEN_FILE = Path(__file__).parent / "token.json"
@@ -18,8 +19,24 @@ def get_access_token() -> str:
     if not TOKEN_FILE.exists():
         raise FileNotFoundError("token.json not found — run scripts/auth.py first")
 
-    creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
+    client_config = load_client_config()
+    client_id = client_config["installed"]["client_id"]
+    client_secret = client_config["installed"]["client_secret"]
+    token_uri = client_config["installed"]["token_uri"]
+
+    creds = Credentials.from_authorized_user_file(
+        str(TOKEN_FILE),
+        scopes=SCOPES,
+    )
     if creds.expired and creds.refresh_token:
+        creds = Credentials(
+            token=creds.token,
+            refresh_token=creds.refresh_token,
+            token_uri=token_uri,
+            client_id=client_id,
+            client_secret=client_secret,
+            scopes=SCOPES,
+        )
         creds.refresh(Request())
         TOKEN_FILE.write_text(creds.to_json())
 
