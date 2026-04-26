@@ -1,10 +1,11 @@
 """One-time Gmail OAuth flow. Run this once to generate token.json."""
 
+import base64
+import json
+import os
 from pathlib import Path
 
 from google_auth_oauthlib.flow import InstalledAppFlow
-
-from credentials import load_client_config
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
@@ -12,6 +13,13 @@ SCOPES = [
 ]
 
 TOKEN_FILE = Path(__file__).parent / "token.json"
+
+
+def load_client_config() -> dict:
+    raw = os.environ.get("GOOGLE_CREDENTIALS")
+    if raw:
+        return json.loads(base64.b64decode(raw))
+    raise EnvironmentError("No credentials found — set GOOGLE_CREDENTIALS env var")
 
 
 def main():
