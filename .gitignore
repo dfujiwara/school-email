@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+auth.pyc
+
+# Local secrets / tokens
+token.json
+*.token.json
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# uv
+.uv/
