@@ -3,10 +3,21 @@ import asyncio
 import logging
 
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
+from markdown_it import MarkdownIt
 
 logger = logging.getLogger(__name__)
 
 GMAIL_MCP_URL = "https://gmailmcp.googleapis.com/mcp/v1"
+MARKDOWN_CONVERTER = MarkdownIt()
+EMAIL_HTML_TEMPLATE = """<!doctype html>
+<html>
+  <body style="margin:0;padding:24px;font-family:Arial,Helvetica,sans-serif;line-height:1.5;color:#111;">
+    <div style="max-width:720px;margin:0 auto;">
+      {content}
+    </div>
+  </body>
+</html>
+"""
 SUMMARY_OUTPUT_FORMAT = {
     "type": "json_schema",
     "schema": {
@@ -75,7 +86,8 @@ SEND_SYSTEM_PROMPT = (
     "Role:\n"
     "You are an email sender. Use Gmail MCP to send the exact email content provided by the user.\n\n"
     "Rules:\n"
-    "- Do not rewrite or summarize the message body\n"
+    "- Do not rewrite, summarize, or alter the message body\n"
+    "- Preserve the HTML exactly as provided\n"
     "- Send to exactly the recipient provided\n"
     "- Confirm only after the email is sent\n"
 )
@@ -123,7 +135,7 @@ def render_summary(payload: dict[str, object]) -> str:
 
     logger.debug(f"Email count: {len(items)}")
     blocks = []
-    for item in items:
+    for index, item in enumerate(items, start=1):
         if not isinstance(item, dict):
             raise ValueError("Each summary item must be a JSON object")
 
@@ -135,16 +147,24 @@ def render_summary(payload: dict[str, object]) -> str:
         if not isinstance(links, list):
             links = [str(links)]
 
-        links_text = ", ".join(str(link) for link in links) if links else "None"
+        links_block = (
+            "\n".join(f"  - {link}" for link in links) if links else "  - None"
+        )
         blocks.append(
-            f"Received date: {received_date}\n"
-            f"Subject: {subject}\n"
-            f"Sender: {sender}\n"
-            f"Summary: {summary}\n"
-            f"Links: {links_text}"
+            f"### Email {index}\n"
+            f"- **Received date:** {received_date}\n"
+            f"- **Sender:** {sender}\n"
+            f"- **Subject:** {subject}\n"
+            f"- **Summary:** {summary}\n"
+            f"- **Links:**\n{links_block}"
         )
 
     return "\n\n".join(blocks)
+
+
+def markdown_to_html(markdown_text: str) -> str:
+    content = MARKDOWN_CONVERTER.render(markdown_text)
+    return EMAIL_HTML_TEMPLATE.format(content=content)
 
 
 async def main(sender_domain: str, recipients: list[str]):
@@ -169,14 +189,16 @@ async def main(sender_domain: str, recipients: list[str]):
     if not isinstance(structured_result, dict):
         raise RuntimeError("LLM did not return structured output")
 
-    email_body = render_summary(structured_result)
-    logger.debug(f"Email body: {email_body}")
+    markdown_body = render_summary(structured_result)
+    html_body = markdown_to_html(markdown_body)
+    logger.debug(f"Markdown body: {markdown_body}")
+    logger.debug(f"HTML body: {html_body}")
 
     send_options = make_options(SEND_SYSTEM_PROMPT)
     send_prompt = (
         f"Send the following email to these recipients: {', '.join(recipients)}. "
         f"Subject: 'Gmail summary for {sender_domain}'. "
-        f"Body must be exactly the text below, with no additions or edits:\n\n{email_body}"
+        f"Body must be exactly the HTML email below, with no additions or edits:\n\n{html_body}"
     )
 
     async for message in query(prompt=send_prompt, options=send_options):

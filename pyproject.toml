@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "claude-agent-sdk>=0.1.68",
+    "markdown-it-py>=3.0.0",
 ]
 
 [dependency-groups]
