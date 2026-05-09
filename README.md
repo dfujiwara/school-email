@@ -19,7 +19,7 @@ Prototype for querying Gmail through Claude Agent SDK + Gmail MCP, then emailing
 
 - Queries emails from the past 7 days whose sender domain contains the value you pass in.
 - Uses the LLM to return strict JSON shaped like `{"emails": [...]}`.
-- Renders that JSON into Markdown, then HTML.
+- Sorts emails in reverse chronological order, then renders the JSON into Markdown and HTML.
 - Sends the HTML summary through Gmail MCP with the subject `Gmail summary for <sender_domain>`.
 
 ## Notes
