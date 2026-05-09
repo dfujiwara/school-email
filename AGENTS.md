@@ -1,10 +1,10 @@
 # AGENTS.md
 
 ## Project overview
-A small Python prototype that uses Claude Agent SDK + Gmail MCP to query Gmail and send a summary email.
+A small Python prototype that uses Claude Agent SDK + Gmail MCP to query Gmail and send a generated email summary.
 
 ## Key files
-- `main.py` — command-line entry point; queries Gmail for recent mail from a sender domain, formats the results, then sends the summary to one or more recipients via Gmail MCP
+- `main.py` — command-line entry point; queries Gmail for recent mail from a sender domain, renders the structured JSON response into Markdown/HTML, then sends the HTML summary to one or more recipients via Gmail MCP
 - `pyproject.toml` — Python/dependency metadata
 - `README.md` — current usage notes
 
@@ -14,10 +14,12 @@ A small Python prototype that uses Claude Agent SDK + Gmail MCP to query Gmail a
 
 ## Runtime flow
 1. Run `uv run main.py <sender_domain> <recipient1> [recipient2 ...]`
-2. The Gmail MCP flow prompts for Google sign-in in the browser if needed
-3. `main.py` queries emails from the past 7 days whose sender email domain contains the provided domain
-4. The LLM returns strict JSON, which is rendered into a plain-text email body
-5. The summary is sent to the requested recipients through Gmail MCP
+2. Optionally pass `--log-level DEBUG|INFO|WARNING|ERROR|CRITICAL`
+3. The Gmail MCP flow prompts for Google sign-in in the browser if needed
+4. `main.py` queries emails from the past 7 days whose sender email domain contains the provided domain
+5. The LLM returns strict JSON shaped like `{"emails": [...]}`
+6. The JSON is rendered into Markdown and then HTML
+7. The HTML summary is sent to the requested recipients through Gmail MCP with subject `Gmail summary for <sender_domain>`
 
 ## Important paths / secrets
 - `token.json` is sensitive; do not commit it
@@ -33,3 +35,5 @@ A small Python prototype that uses Claude Agent SDK + Gmail MCP to query Gmail a
 ## Validation
 - At minimum, ensure modified Python files compile:
   - `python3 -m compileall main.py`
+- Run `uv run pyright` when changing Python logic
+- Run `uv run ruff check .` when changing Python code or docs references
