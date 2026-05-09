@@ -27,3 +27,15 @@ Prototype for querying Gmail through Claude Agent SDK + Gmail MCP, then emailing
 - Sending happens through Gmail MCP.
 - Development checks: `uv run pyright` and `uv run ruff check .`
 - Keep `token.json` out of git if you ever create one locally.
+
+## Docker
+
+Build:
+```bash
+docker build -t school-email .
+```
+
+Run:
+```bash
+docker run --rm school-email example.com recipient@example.com
+```

@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+.claude/
+.git/
+.gitignore
+.ruff_cache/
+.pyright/
+.DS_Store
+token.json
+*.token.json
