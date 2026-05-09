@@ -18,6 +18,10 @@ SUMMARY_OUTPUT_FORMAT = {
                     "type": "object",
                     "properties": {
                         "sender": {"type": "string"},
+                        "received_date": {
+                            "type": "string",
+                            "description": "Date only (YYYY-MM-DD) in Pacific Time",
+                        },
                         "subject": {"type": "string"},
                         "summary": {"type": "string"},
                         "links": {
@@ -25,7 +29,7 @@ SUMMARY_OUTPUT_FORMAT = {
                             "items": {"type": "string"},
                         },
                     },
-                    "required": ["sender", "subject", "summary", "links"],
+                    "required": ["sender", "received_date", "subject", "summary", "links"],
                     "additionalProperties": False,
                 },
             }
@@ -43,7 +47,9 @@ SUMMARY_SYSTEM_PROMPT = (
     "- Do not include any text before or after the JSON\n\n"
     "The response must be an object with a single key: emails\n"
     "- emails: array of objects\n"
-    "- Each object must have sender, subject, summary, links\n"
+    "- Each object must have sender, received_date, subject, summary, links\n"
+    "- received_date must be date-only in Pacific Time, formatted as YYYY-MM-DD\n"
+    "- Normalize the email received timestamp to Pacific Time before taking the date\n"
     "- links must be an array of strings\n"
     "- Use [] for links when there are none\n\n"
     "Example:\n"
@@ -51,6 +57,7 @@ SUMMARY_SYSTEM_PROMPT = (
     '  "emails": [\n'
     "    {\n"
     '      "sender": "Example Sender <sender@example.com>",\n'
+    '      "received_date": "2026-05-08",\n'
     '      "subject": "Example subject",\n'
     '      "summary": "Brief summary of the email.",\n'
     '      "links": ["https://example.com"]\n'
@@ -115,6 +122,7 @@ def render_summary(payload: dict[str, object]) -> str:
             raise ValueError("Each summary item must be a JSON object")
 
         sender = item.get("sender", "Unknown sender")
+        received_date = item.get("received_date", "Unknown date")
         subject = item.get("subject", "(no subject)")
         summary = item.get("summary", "")
         links = item.get("links", [])
@@ -124,6 +132,7 @@ def render_summary(payload: dict[str, object]) -> str:
         links_text = ", ".join(str(link) for link in links) if links else "None"
         blocks.append(
             f"Sender: {sender}\n"
+            f"Received date: {received_date}\n"
             f"Subject: {subject}\n"
             f"Summary: {summary}\n"
             f"Links: {links_text}"
