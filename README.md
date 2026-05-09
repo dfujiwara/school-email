@@ -14,4 +14,5 @@ Prototype for querying Gmail through Claude Agent SDK + Gmail MCP.
 ## Notes
 
 - Sending happens through Gmail MCP.
+- Type checking: `uv run pyright`
 - Keep `token.json` out of git if you ever create one locally.
