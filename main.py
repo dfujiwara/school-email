@@ -53,7 +53,7 @@ async def main(sender_domain: str):
         f"contains {sender_domain!r}. Do not match on the subject line."
     )
 
-    logger.info("Prompt: %s", prompt)
+    logger.debug("Prompt: %s", prompt)
     logger.info("If prompted, complete Google sign-in in the browser.")
 
     async for message in query(prompt=prompt, options=options):
