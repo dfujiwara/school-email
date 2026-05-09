@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import json
 import logging
 
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
@@ -9,17 +10,15 @@ logger = logging.getLogger(__name__)
 GMAIL_MCP_URL = "https://gmailmcp.googleapis.com/mcp/v1"
 SUMMARY_SYSTEM_PROMPT = (
     "Role:\n"
-    "You are an email summarizer. Process batches of emails and provide concise, accurate summaries.\n\n"
-    "Focus:\n"
-    "- Sender\n"
-    "- Subject\n"
-    "- Short summary of the email\n"
-    "- Links mentioned (if any)\n\n"
+    "You are an email summarizer. Process batches of emails and return strict JSON.\n\n"
     "Output format:\n"
-    "- Return strictly the Markdown list as the complete response\n"
-    "- Use one bullet per email\n"
-    "- Do not include any extra text, headings, code fences, or commentary\n"
-    "- If there are no links, write 'Links: None'\n"
+    "- Return a JSON array of objects as the complete response\n"
+    "- Each object must have: sender, subject, summary, links\n"
+    "- sender: string\n"
+    "- subject: string\n"
+    "- summary: string\n"
+    "- links: array of strings; use [] if there are no links\n"
+    "- Do not include markdown, code fences, headings, or commentary\n"
 )
 SEND_SYSTEM_PROMPT = (
     "Role:\n"
@@ -62,6 +61,40 @@ def make_options(system_prompt: str) -> ClaudeAgentOptions:
     )
 
 
+def render_summary(result: str) -> str:
+    cleaned = result.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.removeprefix("```json").removeprefix("```").strip()
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3].strip()
+
+    items = json.loads(cleaned)
+    if not isinstance(items, list):
+        raise ValueError("Summary response must be a JSON array")
+
+    blocks = []
+    for item in items:
+        if not isinstance(item, dict):
+            raise ValueError("Each summary item must be a JSON object")
+
+        sender = item.get("sender", "Unknown sender")
+        subject = item.get("subject", "(no subject)")
+        summary = item.get("summary", "")
+        links = item.get("links", [])
+        if not isinstance(links, list):
+            links = [str(links)]
+
+        links_text = ", ".join(str(link) for link in links) if links else "None"
+        blocks.append(
+            f"Sender: {sender}\n"
+            f"Subject: {subject}\n"
+            f"Summary: {summary}\n"
+            f"Links: {links_text}"
+        )
+
+    return "\n\n".join(blocks)
+
+
 async def main(sender_domain: str, recipients: list[str]):
     options = make_options(SUMMARY_SYSTEM_PROMPT)
 
@@ -80,16 +113,19 @@ async def main(sender_domain: str, recipients: list[str]):
         else:
             logger.debug("[%s]", type(message).__name__)
 
-    result = "\n".join(result_chunks).strip()
+    result = "\n".join(result_chunks)
     if not result:
         raise RuntimeError("LLM did not return any email summary")
     logger.debug(f"Result: {result}")
+
+    email_body = render_summary(result)
+    logger.debug(f"Email body: {email_body}")
 
     send_options = make_options(SEND_SYSTEM_PROMPT)
     send_prompt = (
         f"Send the following email to these recipients: {', '.join(recipients)}. "
         f"Subject: 'Gmail summary for {sender_domain}'. "
-        f"Body must be exactly the text below, with no additions or edits:\n\n{result}"
+        f"Body must be exactly the text below, with no additions or edits:\n\n{email_body}"
     )
 
     async for message in query(prompt=send_prompt, options=send_options):
