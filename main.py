@@ -85,7 +85,9 @@ def parse_args():
     return parser.parse_args()
 
 
-def make_options(system_prompt: str) -> ClaudeAgentOptions:
+def make_options(
+    system_prompt: str, output_format: dict[str, object] | None = None
+) -> ClaudeAgentOptions:
     return ClaudeAgentOptions(
         system_prompt=system_prompt,
         mcp_servers={
@@ -96,7 +98,7 @@ def make_options(system_prompt: str) -> ClaudeAgentOptions:
         },
         effort="low",
         permission_mode="bypassPermissions",
-        output_format=SUMMARY_OUTPUT_FORMAT,
+        output_format=output_format,
     )
 
 
@@ -131,7 +133,7 @@ def render_summary(payload: dict[str, object]) -> str:
 
 
 async def main(sender_domain: str, recipients: list[str]):
-    options = make_options(SUMMARY_SYSTEM_PROMPT)
+    options = make_options(SUMMARY_SYSTEM_PROMPT, SUMMARY_OUTPUT_FORMAT)
 
     prompt = (
         f"Find emails from the past 7 days only if the sender's email domain "
@@ -182,5 +184,9 @@ LOG_LEVELS = {
 
 if __name__ == "__main__":
     args = parse_args()
-    logging.basicConfig(level=LOG_LEVELS[args.log_level], format="%(message)s")
+    logging.basicConfig(
+        level=LOG_LEVELS[args.log_level],
+        format="%(asctime)s %(levelname)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
     asyncio.run(main(args.sender_domain, args.recipients))
