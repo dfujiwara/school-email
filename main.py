@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import json
 import logging
 
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
@@ -8,17 +7,56 @@ from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
 logger = logging.getLogger(__name__)
 
 GMAIL_MCP_URL = "https://gmailmcp.googleapis.com/mcp/v1"
+SUMMARY_OUTPUT_FORMAT = {
+    "type": "json_schema",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "emails": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "sender": {"type": "string"},
+                        "subject": {"type": "string"},
+                        "summary": {"type": "string"},
+                        "links": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                    },
+                    "required": ["sender", "subject", "summary", "links"],
+                    "additionalProperties": False,
+                },
+            }
+        },
+        "required": ["emails"],
+        "additionalProperties": False,
+    },
+}
 SUMMARY_SYSTEM_PROMPT = (
     "Role:\n"
-    "You are an email summarizer. Process batches of emails and return strict JSON.\n\n"
-    "Output format:\n"
-    "- Return a JSON array of objects as the complete response\n"
-    "- Each object must have: sender, subject, summary, links\n"
-    "- sender: string\n"
-    "- subject: string\n"
-    "- summary: string\n"
-    "- links: array of strings; use [] if there are no links\n"
-    "- Do not include markdown, code fences, headings, or commentary\n"
+    "You are an email summarizer.\n\n"
+    "Output rules:\n"
+    "- Return ONLY valid JSON\n"
+    "- Do not wrap it in markdown, code fences, or commentary\n"
+    "- Do not include any text before or after the JSON\n\n"
+    "The response must be an object with a single key: emails\n"
+    "- emails: array of objects\n"
+    "- Each object must have sender, subject, summary, links\n"
+    "- links must be an array of strings\n"
+    "- Use [] for links when there are none\n\n"
+    "Example:\n"
+    "{\n"
+    '  "emails": [\n'
+    "    {\n"
+    '      "sender": "Example Sender <sender@example.com>",\n'
+    '      "subject": "Example subject",\n'
+    '      "summary": "Brief summary of the email.",\n'
+    '      "links": ["https://example.com"]\n'
+    "    }\n"
+    "  ]\n"
+    "}\n"
 )
 SEND_SYSTEM_PROMPT = (
     "Role:\n"
@@ -58,20 +96,17 @@ def make_options(system_prompt: str) -> ClaudeAgentOptions:
         },
         effort="low",
         permission_mode="bypassPermissions",
+        output_format=SUMMARY_OUTPUT_FORMAT,
     )
 
 
-def render_summary(result: str) -> str:
-    cleaned = result.strip()
-    if cleaned.startswith("```"):
-        cleaned = cleaned.removeprefix("```json").removeprefix("```").strip()
-    if cleaned.endswith("```"):
-        cleaned = cleaned[:-3].strip()
-
-    items = json.loads(cleaned)
+def render_summary(payload: dict[str, object]) -> str:
+    logger.debug(f"Parsed payload: {payload!r}")
+    items = payload.get("emails", [])
     if not isinstance(items, list):
-        raise ValueError("Summary response must be a JSON array")
+        raise ValueError("Summary response must contain an emails array")
 
+    logger.debug(f"Email count: {len(items)}")
     blocks = []
     for item in items:
         if not isinstance(item, dict):
@@ -99,26 +134,25 @@ async def main(sender_domain: str, recipients: list[str]):
     options = make_options(SUMMARY_SYSTEM_PROMPT)
 
     prompt = (
-        f"List my emails from the past 7 days only if the sender's email domain "
-        f"contains {sender_domain!r}. Do not match on the subject line."
+        f"Find emails from the past 7 days only if the sender's email domain "
+        f'contains {sender_domain!r}. Do not match on the subject line. Return ONLY valid JSON in the exact shape {{"emails": [...]}} with no explanation, greeting, markdown, or extra text. If no emails match, return {{"emails": []}}.'
     )
 
     logger.debug(f"Prompt: {prompt}")
     logger.info("If prompted, complete Google sign-in in the browser.")
 
-    result_chunks = []
+    structured_result = None
     async for message in query(prompt=prompt, options=options):
         if isinstance(message, ResultMessage):
-            result_chunks.append(message.result)
+            structured_result = message.structured_output
+            logger.debug(f"structured_output: {structured_result!r}")
         else:
             logger.debug("[%s]", type(message).__name__)
 
-    result = "\n".join(result_chunks)
-    if not result:
-        raise RuntimeError("LLM did not return any email summary")
-    logger.debug(f"Result: {result}")
+    if not isinstance(structured_result, dict):
+        raise RuntimeError("LLM did not return structured output")
 
-    email_body = render_summary(result)
+    email_body = render_summary(structured_result)
     logger.debug(f"Email body: {email_body}")
 
     send_options = make_options(SEND_SYSTEM_PROMPT)
