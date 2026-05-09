@@ -1,12 +1,18 @@
 import asyncio
-from pprint import pformat
+import argparse
 
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
 
 GMAIL_MCP_URL = "https://gmailmcp.googleapis.com/mcp/v1"
 
 
-async def main():
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("sender_domain", help="Email domain to match")
+    return parser.parse_args()
+
+
+async def main(sender_domain: str):
     options = ClaudeAgentOptions(
         mcp_servers={
             "gmail": {
@@ -17,11 +23,12 @@ async def main():
         permission_mode="bypassPermissions",
     )
 
-    sender_domain = "Piedmont"
     prompt = (
-        f"List my 5 most recent emails only if the sender's email domain "
+        f"List my emails from the past 7 days only if the sender's email domain "
         f"contains {sender_domain!r}. Do not match on the subject line. "
-        f"Return each email's subject and sender."
+        f"Return only a Markdown list with one bullet per email and no extra text. "
+        f"Each bullet must include sender, subject, a short summary, and any links mentioned. "
+        f"If there are no links, write 'Links: None'."
     )
 
     print(f"Prompt: {prompt}\n")
@@ -29,17 +36,11 @@ async def main():
 
     async for message in query(prompt=prompt, options=options):
         if isinstance(message, ResultMessage):
-            print(f"Result: {message.result}")
-            print(
-                "Summary: "
-                f"stop_reason={message.stop_reason!r}, "
-                f"turns={message.num_turns}, "
-                f"cost=${message.total_cost_usd or 0:.4f}"
-            )
+            print(message.result)
         else:
-            details = getattr(message, "__dict__", None) or {}
-            print(f"[{type(message).__name__}] {pformat(details)}")
+            print(f"[{type(message).__name__}]")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    args = parse_args()
+    asyncio.run(main(args.sender_domain))
