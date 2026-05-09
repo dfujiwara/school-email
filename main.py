@@ -16,9 +16,9 @@ SYSTEM_PROMPT = (
     "- Short summary of the email\n"
     "- Links mentioned (if any)\n\n"
     "Output format:\n"
-    "- Return only a Markdown list\n"
+    "- Return strictly the Markdown list as the complete response\n"
     "- Use one bullet per email\n"
-    "- Do not include extra commentary\n"
+    "- Do not include any extra text, headings, code fences, or commentary\n"
     "- If there are no links, write 'Links: None'\n"
 )
 
