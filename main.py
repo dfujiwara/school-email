@@ -29,7 +29,13 @@ SUMMARY_OUTPUT_FORMAT = {
                             "items": {"type": "string"},
                         },
                     },
-                    "required": ["sender", "received_date", "subject", "summary", "links"],
+                    "required": [
+                        "sender",
+                        "received_date",
+                        "subject",
+                        "summary",
+                        "links",
+                    ],
                     "additionalProperties": False,
                 },
             }
@@ -131,9 +137,9 @@ def render_summary(payload: dict[str, object]) -> str:
 
         links_text = ", ".join(str(link) for link in links) if links else "None"
         blocks.append(
-            f"Sender: {sender}\n"
             f"Received date: {received_date}\n"
             f"Subject: {subject}\n"
+            f"Sender: {sender}\n"
             f"Summary: {summary}\n"
             f"Links: {links_text}"
         )
