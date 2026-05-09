@@ -6,7 +6,7 @@ from datetime import date
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
 from markdown_it import MarkdownIt
 
-from prompts import SUMMARY_OUTPUT_FORMAT, SUMMARY_SYSTEM_PROMPT, SEND_SYSTEM_PROMPT
+from prompts import SEND_SYSTEM_PROMPT, SUMMARY_OUTPUT_FORMAT, SUMMARY_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ def render_summary(payload: dict[str, object]) -> str:
     validated_items.sort(key=received_date_sort_key, reverse=True)
 
     blocks = []
-    for index, item in enumerate(validated_items, start=1):
+    for item in validated_items:
         sender = item.get("sender", "Unknown sender")
         received_date = item.get("received_date", "Unknown date")
         subject = item.get("subject", "(no subject)")
@@ -95,10 +95,9 @@ def render_summary(payload: dict[str, object]) -> str:
             "\n".join(f"  - {link}" for link in links) if links else "  - None"
         )
         blocks.append(
-            f"### Email {index}\n"
-            f"- **Received date:** {received_date}\n"
-            f"- **Sender:** {sender}\n"
-            f"- **Subject:** {subject}\n"
+            f"### {subject}\n"
+            f"- **Date:** {received_date}\n"
+            f"- **From:** {sender}\n"
             f"- **Summary:** {summary}\n"
             f"- **Links:**\n{links_block}"
         )
@@ -140,11 +139,13 @@ async def generate_summary_html(sender_domain: str) -> str:
     return html_body
 
 
-async def send_summary_email(sender_domain: str, recipients: list[str], html_body: str) -> None:
+async def send_summary_email(
+    sender_domain: str, recipients: list[str], html_body: str
+) -> None:
     send_options = make_options(SEND_SYSTEM_PROMPT)
     send_prompt = (
         f"Send the following email to these recipients: {', '.join(recipients)}. "
-        f"Subject: 'Gmail summary for {sender_domain}'. "
+        f"Subject: 'Email summary from {sender_domain}'. "
         f"Body must be exactly the HTML email below, with no additions or edits:\n\n{html_body}"
     )
 
