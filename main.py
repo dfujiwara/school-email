@@ -6,6 +6,8 @@ from datetime import date
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
 from markdown_it import MarkdownIt
 
+from prompts import SUMMARY_OUTPUT_FORMAT, SUMMARY_SYSTEM_PROMPT, SEND_SYSTEM_PROMPT
+
 logger = logging.getLogger(__name__)
 
 GMAIL_MCP_URL = "https://gmailmcp.googleapis.com/mcp/v1"
@@ -19,79 +21,6 @@ EMAIL_HTML_TEMPLATE = """<!doctype html>
   </body>
 </html>
 """
-SUMMARY_OUTPUT_FORMAT = {
-    "type": "json_schema",
-    "schema": {
-        "type": "object",
-        "properties": {
-            "emails": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "sender": {"type": "string"},
-                        "received_date": {
-                            "type": "string",
-                            "description": "Date only (YYYY-MM-DD) in Pacific Time",
-                        },
-                        "subject": {"type": "string"},
-                        "summary": {"type": "string"},
-                        "links": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                        },
-                    },
-                    "required": [
-                        "sender",
-                        "received_date",
-                        "subject",
-                        "summary",
-                        "links",
-                    ],
-                    "additionalProperties": False,
-                },
-            }
-        },
-        "required": ["emails"],
-        "additionalProperties": False,
-    },
-}
-SUMMARY_SYSTEM_PROMPT = (
-    "Role:\n"
-    "You are an email summarizer.\n\n"
-    "Output rules:\n"
-    "- Return ONLY valid JSON\n"
-    "- Do not wrap it in markdown, code fences, or commentary\n"
-    "- Do not include any text before or after the JSON\n\n"
-    "The response must be an object with a single key: emails\n"
-    "- emails: array of objects\n"
-    "- Each object must have sender, received_date, subject, summary, links\n"
-    "- received_date must be date-only in Pacific Time, formatted as YYYY-MM-DD\n"
-    "- Normalize the email received timestamp to Pacific Time before taking the date\n"
-    "- links must be an array of strings\n"
-    "- Use [] for links when there are none\n\n"
-    "Example:\n"
-    "{\n"
-    '  "emails": [\n'
-    "    {\n"
-    '      "sender": "Example Sender <sender@example.com>",\n'
-    '      "received_date": "2026-05-08",\n'
-    '      "subject": "Example subject",\n'
-    '      "summary": "Brief summary of the email.",\n'
-    '      "links": ["https://example.com"]\n'
-    "    }\n"
-    "  ]\n"
-    "}\n"
-)
-SEND_SYSTEM_PROMPT = (
-    "Role:\n"
-    "You are an email sender. Use Gmail MCP to send the exact email content provided by the user.\n\n"
-    "Rules:\n"
-    "- Do not rewrite, summarize, or alter the message body\n"
-    "- Preserve the HTML exactly as provided\n"
-    "- Send to exactly the recipient provided\n"
-    "- Confirm only after the email is sent\n"
-)
 
 
 def parse_args():
@@ -182,7 +111,7 @@ def markdown_to_html(markdown_text: str) -> str:
     return EMAIL_HTML_TEMPLATE.format(content=content)
 
 
-async def main(sender_domain: str, recipients: list[str]):
+async def generate_summary_html(sender_domain: str) -> str:
     options = make_options(SUMMARY_SYSTEM_PROMPT, SUMMARY_OUTPUT_FORMAT)
 
     prompt = (
@@ -208,7 +137,10 @@ async def main(sender_domain: str, recipients: list[str]):
     html_body = markdown_to_html(markdown_body)
     logger.debug(f"Markdown body: {markdown_body}")
     logger.debug(f"HTML body: {html_body}")
+    return html_body
 
+
+async def send_summary_email(sender_domain: str, recipients: list[str], html_body: str) -> None:
     send_options = make_options(SEND_SYSTEM_PROMPT)
     send_prompt = (
         f"Send the following email to these recipients: {', '.join(recipients)}. "
@@ -223,6 +155,11 @@ async def main(sender_domain: str, recipients: list[str]):
             logger.debug("[%s]", type(message).__name__)
 
     logger.info(f"Sent summary email to {', '.join(recipients)}")
+
+
+async def main(sender_domain: str, recipients: list[str]):
+    html_body = await generate_summary_html(sender_domain)
+    await send_summary_email(sender_domain, recipients, html_body)
 
 
 LOG_LEVELS = {
