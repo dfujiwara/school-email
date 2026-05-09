@@ -18,7 +18,7 @@ A small Python prototype that uses Claude Agent SDK + Gmail MCP to query Gmail a
 3. The Gmail MCP flow prompts for Google sign-in in the browser if needed
 4. `main.py` queries emails from the past 7 days whose sender email domain contains the provided domain
 5. The LLM returns strict JSON shaped like `{"emails": [...]}`
-6. The JSON is rendered into Markdown and then HTML
+6. The JSON is sorted in reverse chronological order, then rendered into Markdown and HTML
 7. The HTML summary is sent to the requested recipients through Gmail MCP with subject `Gmail summary for <sender_domain>`
 
 ## Important paths / secrets

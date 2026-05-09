@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+from datetime import date
 
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
 from markdown_it import MarkdownIt
@@ -133,12 +134,26 @@ def render_summary(payload: dict[str, object]) -> str:
     if not isinstance(items, list):
         raise ValueError("Summary response must contain an emails array")
 
+    def received_date_sort_key(item: dict[str, object]) -> date:
+        received_date = item.get("received_date")
+        if isinstance(received_date, str):
+            try:
+                return date.fromisoformat(received_date)
+            except ValueError:
+                pass
+        return date.min
+
     logger.debug(f"Email count: {len(items)}")
-    blocks = []
-    for index, item in enumerate(items, start=1):
+    validated_items: list[dict[str, object]] = []
+    for item in items:
         if not isinstance(item, dict):
             raise ValueError("Each summary item must be a JSON object")
+        validated_items.append(item)
 
+    validated_items.sort(key=received_date_sort_key, reverse=True)
+
+    blocks = []
+    for index, item in enumerate(validated_items, start=1):
         sender = item.get("sender", "Unknown sender")
         received_date = item.get("received_date", "Unknown date")
         subject = item.get("subject", "(no subject)")
