@@ -28,6 +28,20 @@ Prototype for querying Gmail through Claude Agent SDK + Gmail MCP, then emailing
 - Development checks: `uv run pyright` and `uv run ruff check .`
 - Keep `token.json` out of git if you ever create one locally.
 
+## Summarize an attached document
+
+Find an email by Gmail search query, read any attached document, and print a summary:
+
+```bash
+uv run summarize_doc.py "subject:report has:attachment"
+```
+
+Optionally send the summary to one or more recipients:
+
+```bash
+uv run summarize_doc.py "subject:report has:attachment" recipient@example.com
+```
+
 ## Docker
 
 Build:
