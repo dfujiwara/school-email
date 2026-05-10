@@ -16,6 +16,7 @@ auth.pyc
 # Local secrets / tokens
 token.json
 *.token.json
+credentials.json
 
 # Editor / OS
 .DS_Store
