@@ -40,3 +40,4 @@ RUN useradd --create-home --home-dir /home/appuser --uid 10001 appuser && chown 
 USER appuser
 
 ENTRYPOINT ["uv", "run", "main.py"]
+CMD ["--log-level", "INFO"]

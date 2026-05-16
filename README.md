@@ -21,6 +21,7 @@ Prototype for summarizing Gmail with Claude skills plus Google Workspace CLI, th
 - Uses the LLM to return strict JSON shaped like `{"emails": [...]}`.
 - Sorts emails in reverse chronological order, then renders the JSON into Markdown and HTML.
 - Sends the HTML summary with the subject `Gmail summary for <sender_domain>`.
+- If no emails match, sends a short no-results email instead of failing silently.
 
 ## Notes
 
@@ -37,7 +38,17 @@ Build:
 docker build -t school-email .
 ```
 
-Run:
+Run with an Anthropic API key:
 ```bash
-docker run --rm school-email example.com recipient@example.com
+docker run --rm -it \
+  -e ANTHROPIC_API_KEY=your_key_here \
+  school-email example.com recipient@example.com
 ```
+
+Or use an env file:
+```bash
+docker run --rm -it --env-file .env \
+  school-email example.com recipient@example.com
+```
+
+If you use Claude login instead of an API key, mount the Claude config into the container too.
