@@ -1,10 +1,10 @@
 # school-email
 
-Prototype for querying Gmail through Claude Agent SDK + Gmail MCP, then emailing a generated summary.
+Prototype for summarizing Gmail with Claude + Google Workspace tools, then emailing a generated summary.
 
 ## Usage
 
-1. Set up Google access in the browser when prompted by the MCP service.
+1. If you run the Python prototype, complete Google sign-in in the browser when prompted.
 2. Run:
    ```bash
    uv run main.py example.com recipient1@example.com recipient2@example.com
@@ -20,11 +20,12 @@ Prototype for querying Gmail through Claude Agent SDK + Gmail MCP, then emailing
 - Queries emails from the past 7 days whose sender domain contains the value you pass in.
 - Uses the LLM to return strict JSON shaped like `{"emails": [...]}`.
 - Sorts emails in reverse chronological order, then renders the JSON into Markdown and HTML.
-- Sends the HTML summary through Gmail MCP with the subject `Gmail summary for <sender_domain>`.
+- Sends the HTML summary through the configured Gmail transport with the subject `Gmail summary for <sender_domain>`.
 
 ## Notes
 
-- Sending happens through Gmail MCP.
+- The repo includes a local Claude skill at `.claude/skills/school-email/SKILL.md`.
+- The Docker image copies that skill into `/app/.claude/skills/school-email/SKILL.md`.
 - Development checks: `uv run pyright` and `uv run ruff check .`
 - Keep `token.json` out of git if you ever create one locally.
 
