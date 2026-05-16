@@ -1,6 +1,6 @@
 # school-email
 
-Prototype for summarizing Gmail with Claude + Google Workspace tools, then emailing a generated summary.
+Prototype for summarizing Gmail with Claude skills plus Google Workspace CLI, then emailing a generated summary.
 
 ## Usage
 
@@ -17,15 +17,16 @@ Prototype for summarizing Gmail with Claude + Google Workspace tools, then email
 
 ## What it does
 
-- Queries emails from the past 7 days whose sender domain contains the value you pass in.
+- Uses Claude with the local skill and `gws` via bash to query emails from the past 7 days whose sender domain contains the value you pass in.
 - Uses the LLM to return strict JSON shaped like `{"emails": [...]}`.
 - Sorts emails in reverse chronological order, then renders the JSON into Markdown and HTML.
-- Sends the HTML summary through the configured Gmail transport with the subject `Gmail summary for <sender_domain>`.
+- Sends the HTML summary with the subject `Gmail summary for <sender_domain>`.
 
 ## Notes
 
 - The repo includes a local Claude skill at `.claude/skills/school-email/SKILL.md`.
 - The Docker image copies that skill into `/app/.claude/skills/school-email/SKILL.md` and installs `gws`.
+- No MCP server is needed; Claude uses bash + `gws`.
 - Development checks: `uv run pyright` and `uv run ruff check .`
 - Keep `token.json` out of git if you ever create one locally.
 

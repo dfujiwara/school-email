@@ -66,7 +66,7 @@ SUMMARY_SYSTEM_PROMPT = (
 
 SEND_SYSTEM_PROMPT = (
     "Role:\n"
-    "You are an email sender. Use Gmail MCP to send the exact email content provided by the user.\n\n"
+    "You are an email sender. Use bash and gws to send the exact email content provided by the user.\n\n"
     "Rules:\n"
     "- Do not rewrite, summarize, or alter the message body\n"
     "- Preserve the HTML exactly as provided\n"
