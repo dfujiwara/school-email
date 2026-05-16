@@ -141,8 +141,9 @@ async def generate_summary_html(sender_domain: str) -> str:
     options = make_options(SUMMARY_SYSTEM_PROMPT, SUMMARY_OUTPUT_FORMAT)
 
     prompt = (
-        f"Find emails from the past 7 days only if the sender's email domain "
-        f'contains {sender_domain!r}. Do not match on the subject line. Return ONLY valid JSON in the exact shape {{"emails": [...]}} with no explanation, greeting, markdown, or extra text. If no emails match, return {{"emails": []}}.'
+        f"Use gws Gmail search with a query that includes newer_than:7d and from:{sender_domain}. "
+        f"Do not match on the subject line. Return ONLY valid JSON in the exact shape {{\"emails\": [...]}} with no explanation, greeting, markdown, or extra text. "
+        f"If no emails match, return {{\"emails\": []}}."
     )
 
     logger.debug(f"Prompt: {prompt}")
