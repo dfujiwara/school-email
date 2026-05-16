@@ -10,7 +10,6 @@ from prompts import SEND_SYSTEM_PROMPT, SUMMARY_OUTPUT_FORMAT, SUMMARY_SYSTEM_PR
 
 logger = logging.getLogger(__name__)
 
-GMAIL_MCP_URL = "https://gmailmcp.googleapis.com/mcp/v1"
 MARKDOWN_CONVERTER = MarkdownIt()
 EMAIL_HTML_TEMPLATE = """<!doctype html>
 <html>
@@ -45,12 +44,9 @@ def make_options(
 ) -> ClaudeAgentOptions:
     return ClaudeAgentOptions(
         system_prompt=system_prompt,
-        mcp_servers={
-            "gmail": {
-                "type": "http",
-                "url": GMAIL_MCP_URL,
-            }
-        },
+        tools={"type": "preset", "preset": "claude_code"},
+        allowed_tools=["Bash"],
+        skills=["school-email"],
         effort="low",
         permission_mode="bypassPermissions",
         output_format=output_format,
@@ -159,8 +155,9 @@ async def send_summary_email(
 
 
 async def main(sender_domain: str, recipients: list[str]):
-    html_body = await generate_summary_html(sender_domain)
-    await send_summary_email(sender_domain, recipients, html_body)
+    await send_summary_email(
+        sender_domain, recipients, await generate_summary_html(sender_domain)
+    )
 
 
 LOG_LEVELS = {
