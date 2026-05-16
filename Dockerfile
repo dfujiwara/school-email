@@ -9,7 +9,8 @@ ENV UV_PROJECT_ENVIRONMENT=/app/.venv \
     HOME=/home/appuser
 
 COPY pyproject.toml uv.lock README.md ./
-COPY main.py ./
+COPY main.py prompts.py ./
+COPY .claude/skills ./.claude/skills
 
 RUN uv sync --frozen --no-dev --no-install-project
 RUN useradd --create-home --home-dir /home/appuser --uid 10001 appuser && chown -R appuser:appuser /app /home/appuser
