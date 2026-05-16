@@ -1,9 +1,12 @@
 import argparse
 import asyncio
+import json
 import logging
 from datetime import date
+from pprint import pformat
 
 from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
+from claude_agent_sdk.types import HookContext, HookInput, HookJSONOutput, HookMatcher
 from markdown_it import MarkdownIt
 
 from prompts import SEND_SYSTEM_PROMPT, SUMMARY_OUTPUT_FORMAT, SUMMARY_SYSTEM_PROMPT
@@ -20,6 +23,13 @@ EMAIL_HTML_TEMPLATE = """<!doctype html>
   </body>
 </html>
 """
+
+
+def format_log_data(data: object) -> str:
+    try:
+        return json.dumps(data, indent=2, ensure_ascii=False)
+    except TypeError:
+        return pformat(data, sort_dicts=False)
 
 
 def parse_args():
@@ -39,6 +49,20 @@ def parse_args():
     return parser.parse_args()
 
 
+async def log_pre_tool_use(
+    hook_input: HookInput, tool_use_id: str | None, context: HookContext
+) -> HookJSONOutput:
+    logger.debug(f"PreToolUse input:\n{format_log_data(hook_input)}")
+    return {"continue_": True}
+
+
+async def log_post_tool_use(
+    hook_input: HookInput, tool_use_id: str | None, context: HookContext
+) -> HookJSONOutput:
+    logger.debug(f"PostToolUse input:\n{format_log_data(hook_input)}")
+    return {"continue_": True}
+
+
 def make_options(
     system_prompt: str, output_format: dict[str, object] | None = None
 ) -> ClaudeAgentOptions:
@@ -48,25 +72,32 @@ def make_options(
         allowed_tools=["Bash"],
         skills=["school-email"],
         effort="low",
-        permission_mode="bypassPermissions",
+        permission_mode="dontAsk",
         output_format=output_format,
+        hooks={
+            "PreToolUse": [HookMatcher(matcher="Bash", hooks=[log_pre_tool_use])],
+            "PostToolUse": [HookMatcher(matcher="Bash", hooks=[log_post_tool_use])],
+        },
     )
 
 
 def render_summary(payload: dict[str, object]) -> str:
-    logger.debug(f"Parsed payload: {payload!r}")
-    items = payload.get("emails", [])
-    if not isinstance(items, list):
+    logger.debug(f"Parsed payload:\n{format_log_data(payload)}")
+    items = payload.get("emails")
+    if items is None or not isinstance(items, list):
         raise ValueError("Summary response must contain an emails array")
+
+    if not items:
+        return "No matching emails found in the past 7 days."
 
     def received_date_sort_key(item: dict[str, object]) -> date:
         received_date = item.get("received_date")
-        if isinstance(received_date, str):
-            try:
-                return date.fromisoformat(received_date)
-            except ValueError:
-                pass
-        return date.min
+        if not isinstance(received_date, str):
+            raise ValueError("Each summary item must include a received_date string")
+        try:
+            return date.fromisoformat(received_date)
+        except ValueError as exc:
+            raise ValueError(f"Invalid received_date: {received_date!r}") from exc
 
     logger.debug(f"Email count: {len(items)}")
     validated_items: list[dict[str, object]] = []
@@ -121,17 +152,21 @@ async def generate_summary_html(sender_domain: str) -> str:
     async for message in query(prompt=prompt, options=options):
         if isinstance(message, ResultMessage):
             structured_result = message.structured_output
-            logger.debug(f"structured_output: {structured_result!r}")
+            logger.debug(f"structured_output:\n{format_log_data(structured_result)}")
         else:
             logger.debug("[%s]", type(message).__name__)
 
     if not isinstance(structured_result, dict):
         raise RuntimeError("LLM did not return structured output")
 
+    logger.debug(
+        "Emails structured output:\n%s",
+        json.dumps(structured_result, indent=2, ensure_ascii=False),
+    )
     markdown_body = render_summary(structured_result)
     html_body = markdown_to_html(markdown_body)
-    logger.debug(f"Markdown body: {markdown_body}")
-    logger.debug(f"HTML body: {html_body}")
+    logger.debug(f"Markdown body:\n{markdown_body}")
+    logger.debug(f"HTML body:\n{html_body}")
     return html_body
 
 
@@ -141,7 +176,7 @@ async def send_summary_email(
     send_options = make_options(SEND_SYSTEM_PROMPT)
     send_prompt = (
         f"Send the following email to these recipients: {', '.join(recipients)}. "
-        f"Subject: 'Email summary from {sender_domain}'. "
+        f"Subject: 'Gmail summary for {sender_domain}'. "
         f"Body must be exactly the HTML email below, with no additions or edits:\n\n{html_body}"
     )
 
