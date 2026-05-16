@@ -5,19 +5,13 @@ description: Query Gmail for recent mail from a sender domain, summarize it, and
 
 # school-email
 
-Use this skill to reproduce the repository workflow with Google Workspace (`gws`) instead of Gmail MCP.
-
-This skill accepts an optional Gmail search filter parameter.
-
 ## Goal
 
-Given a sender domain, optional Gmail filter, and one or more recipients:
-1. Find emails from the last 7 days.
-2. Apply the Gmail search filter if provided.
-3. Keep only messages whose sender email domain contains the requested domain.
-4. Sort newest-first.
-5. Summarize the results.
-6. Send the summary as HTML email.
+Given a sender domain and one or more recipients:
+1. Query Gmail for the last 7 days using a `q` that includes `newer_than:7d` and `from:<sender_domain>`.
+2. Fetch message metadata for the returned IDs.
+3. Summarize the results.
+4. Send the summary as HTML email.
 
 ## Prerequisites
 
@@ -31,13 +25,13 @@ Given a sender domain, optional Gmail filter, and one or more recipients:
 ## Workflow
 
 ### 1) List recent messages
-Use Gmail search for the last 7 days, optionally combining it with a user-provided filter, then inspect the returned message IDs:
+Use a single canonical Gmail search query:
 
 ```bash
-gws gmail users messages list --params '{"userId":"me","q":"newer_than:7d","maxResults":100}'
+gws gmail users messages list --params '{"userId":"me","q":"newer_than:7d from:example.com","maxResults":100}'
 ```
 
-If a filter is provided, merge it into `q`, for example:
+If an extra filter is needed, append it to the same `q` string:
 
 ```bash
 gws gmail users messages list --params '{"userId":"me","q":"newer_than:7d from:example.com is:unread","maxResults":100}'
@@ -50,11 +44,10 @@ For each message ID, fetch metadata with `From`, `Subject`, and `Date` headers:
 gws gmail users messages get --params '{"userId":"me","id":"MESSAGE_ID","format":"metadata","metadataHeaders":["From","Subject","Date"]}'
 ```
 
-### 3) Filter and summarize
-- Keep only messages where the sender domain contains the requested domain.
-- If a Gmail search filter was supplied, apply it when listing messages.
+### 3) Summarize
 - Extract sender, received date, subject, short summary, and links if available.
 - Sort the final set in reverse chronological order.
+- If Gmail returned any unexpected messages, discard them before summarizing.
 
 ### 4) Send the summary
 Send an HTML email to the requested recipients using Gmail send. Build the exact request shape from the schema output.
