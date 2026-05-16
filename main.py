@@ -155,7 +155,7 @@ async def generate_summary_html(sender_domain: str) -> str:
             structured_result = message.structured_output
             logger.debug(f"structured_output:\n{format_log_data(structured_result)}")
         else:
-            logger.debug("[%s]", type(message).__name__)
+            logger.debug(f"[{type(message).__name__}]")
 
     if not isinstance(structured_result, dict):
         raise RuntimeError("LLM did not return structured output")
@@ -183,9 +183,9 @@ async def send_summary_email(
 
     async for message in query(prompt=send_prompt, options=send_options):
         if isinstance(message, ResultMessage):
-            logger.info("%s", message.result)
+            logger.info(f"{message.result}")
         else:
-            logger.debug("[%s]", type(message).__name__)
+            logger.debug(f"[{type(message).__name__}]")
 
     logger.info(f"Sent summary email to {', '.join(recipients)}")
 

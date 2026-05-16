@@ -31,6 +31,7 @@ A small Python prototype that uses Claude Agent SDK + Gmail MCP to query Gmail a
 - Keep Gmail/MCP prompts and behavior aligned with `main.py` and the README
 - If adding new scripts, document how to run them in `README.md`
 - Avoid hardcoding prompts or user-specific values unless clearly intended
+- For Python logging, use f-strings consistently
 
 ## Validation
 - At minimum, ensure modified Python files compile:
