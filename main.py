@@ -90,6 +90,13 @@ def render_summary(payload: dict[str, object]) -> str:
     if not items:
         return "No matching emails found in the past 7 days."
 
+    logger.debug(f"Email count: {len(items)}")
+    validated_items: list[dict[str, object]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            raise ValueError("Each summary item must be a JSON object")
+        validated_items.append(item)
+
     def received_date_sort_key(item: dict[str, object]) -> date:
         received_date = item.get("received_date")
         if not isinstance(received_date, str):
@@ -98,13 +105,6 @@ def render_summary(payload: dict[str, object]) -> str:
             return date.fromisoformat(received_date)
         except ValueError as exc:
             raise ValueError(f"Invalid received_date: {received_date!r}") from exc
-
-    logger.debug(f"Email count: {len(items)}")
-    validated_items: list[dict[str, object]] = []
-    for item in items:
-        if not isinstance(item, dict):
-            raise ValueError("Each summary item must be a JSON object")
-        validated_items.append(item)
 
     validated_items.sort(key=received_date_sort_key, reverse=True)
 
