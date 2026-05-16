@@ -25,7 +25,7 @@ Prototype for summarizing Gmail with Claude + Google Workspace tools, then email
 ## Notes
 
 - The repo includes a local Claude skill at `.claude/skills/school-email/SKILL.md`.
-- The Docker image copies that skill into `/app/.claude/skills/school-email/SKILL.md`.
+- The Docker image copies that skill into `/app/.claude/skills/school-email/SKILL.md` and installs `gws`.
 - Development checks: `uv run pyright` and `uv run ruff check .`
 - Keep `token.json` out of git if you ever create one locally.
 
