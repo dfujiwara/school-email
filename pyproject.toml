@@ -19,5 +19,3 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-markers = ["eval: live AI eval tests (require ANTHROPIC_API_KEY, slow)"]
-addopts = "-m 'not eval'"

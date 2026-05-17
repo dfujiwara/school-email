@@ -1,0 +1,11 @@
+{
+  "emails": [
+    {
+      "sender": "Office <office@school.com>",
+      "received_date": "2026-05-14",
+      "subject": "School closed tomorrow",
+      "summary": "School will be closed tomorrow for a staff development day.",
+      "links": []
+    }
+  ]
+}
