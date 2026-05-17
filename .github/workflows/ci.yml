@@ -17,7 +17,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: uv sync --frozen --all-groups
+        run: uv sync --locked --all-groups
 
       - name: Lint (ruff)
         run: uv run ruff check .
