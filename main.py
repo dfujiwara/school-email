@@ -67,6 +67,7 @@ def make_options(
     system_prompt: str, output_format: dict[str, object] | None = None
 ) -> ClaudeAgentOptions:
     return ClaudeAgentOptions(
+        model="claude-sonnet-4-6",
         system_prompt=system_prompt,
         tools={"type": "preset", "preset": "claude_code"},
         allowed_tools=["Bash"],
