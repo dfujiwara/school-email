@@ -1,0 +1,15 @@
+You are given Gmail search results as JSON.
+
+Sender domain: {{sender_domain}}
+
+Search results:
+{{emails_json}}
+
+Return strict JSON only in the exact shape used by main.py:
+{"emails":[{"sender":"...","received_date":"YYYY-MM-DD","subject":"...","summary":"...","links":["..."]}]}
+
+Rules:
+- output only JSON
+- the top-level object must contain only emails
+- each email object must contain only sender, received_date, subject, summary, links
+- use [] for links when there are none

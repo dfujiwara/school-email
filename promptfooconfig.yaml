@@ -1,0 +1,55 @@
+prompts:
+  - file://prompts/promptfoo_summary.prompt.txt
+
+providers:
+  - id: anthropic:messages:claude-sonnet-4-6
+    config:
+      apiKeyRequired: false
+
+# Regression harness for the exact JSON contract used by main.py.
+tests:
+  - name: summary JSON matches the main.py schema
+    vars:
+      sender_domain: example.com
+      emails_json: |
+        {
+          "emails": [
+            {
+              "sender": "Alice <alice@example.com>",
+              "received_date": "2026-05-15",
+              "subject": "Meeting notes",
+              "summary": "Shared notes from the meeting.",
+              "links": ["https://example.com/notes"]
+            },
+            {
+              "sender": "Bob <bob@example.com>",
+              "received_date": "2026-05-14",
+              "subject": "Follow-up",
+              "summary": "Checking in after the call.",
+              "links": []
+            }
+          ]
+        }
+    assert:
+      - type: is-json
+      - type: javascript
+        value: |
+          const obj = JSON.parse(output);
+          if (!obj || typeof obj !== 'object' || !Array.isArray(obj.emails)) return false;
+          if (Object.keys(obj).length !== 1) return false;
+          return obj.emails.every((item) => {
+            const keys = Object.keys(item).sort();
+            return JSON.stringify(keys) === JSON.stringify(['links', 'received_date', 'sender', 'subject', 'summary']);
+          });
+
+  - name: empty results stay empty
+    vars:
+      sender_domain: example.com
+      emails_json: |
+        {"emails": []}
+    assert:
+      - type: is-json
+      - type: javascript
+        value: |
+          const obj = JSON.parse(output);
+          return obj && Array.isArray(obj.emails) && obj.emails.length === 0;
