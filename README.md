@@ -29,7 +29,8 @@ Prototype for summarizing Gmail with Claude skills plus Google Workspace CLI, th
 - The Docker image copies that skill into `/app/.claude/skills/school-email/SKILL.md` and installs `gws`.
 - No MCP server is needed; Claude uses bash + `gws`.
 - Development checks: `uv run pyright` and `uv run ruff check .`
-- Keep `token.json` out of git if you ever create one locally.
+- Keep `token.json` and `.env` out of git if you ever create them locally.
+- Promptfoo example: `npx promptfoo eval -c promptfooconfig.yaml` after setting whatever provider env vars you use locally.
 
 ## Docker
 
